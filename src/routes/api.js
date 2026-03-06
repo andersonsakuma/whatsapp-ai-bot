@@ -1,0 +1,13 @@
+import { Router } from "express";
+import { resolveUserDecision } from "../controllers/bot.js";
+import { store, getConv } from "../store/memory.js";
+const router = Router();
+router.get("/status", (_, res) => res.json({ botActive: store.botActive, conversations: store.conversations.size, pendingDecisions: store.decisionQueue.size }));
+router.get("/conversations", (_, res) => res.json([...store.conversations.values()].map(c => ({ jid: c.jid, contact: c.contact, lastMessage: c.messages[c.messages.length - 1] || null, pending: c.pending }))));
+router.get("/conversations/:jid", (req, res) => res.json(getConv(decodeURIComponent(req.params.jid))));
+router.get("/decisions", (_, res) => res.json([...store.decisionQueue.entries()].map(([id, d]) => ({ id, ...d }))));
+router.post("/decisions/:id/resolve", async (req, res) => { const { chosenReply } = req.body; if (!chosenReply) return res.status(400).json({ error: "chosenReply obrigatorio" }); try { await resolveUserDecision({ decisionId: req.params.id, chosenReply }); res.json({ ok: true }); } catch (err) { res.status(404).json({ error: err.message }); } });
+router.post("/bot/toggle", (_, res) => { store.botActive = !store.botActive; res.json({ botActive: store.botActive }); });
+router.get("/log", (_, res) => res.json(store.autoLog));
+router.get("/qr", (_, res) => { if (!global.__lastQR) return res.send("QR ainda nao gerado. Aguarde e recarregue."); res.send(`<img src="${global.__lastQR}" style="width:300px">`); });
+export default router;

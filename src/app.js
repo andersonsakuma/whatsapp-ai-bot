@@ -1,0 +1,17 @@
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import { createServer } from "http";
+import { Server as IOServer } from "socket.io";
+import { logger } from "./config/index.js";
+import apiRouter from "./routes/api.js";
+import { startWhatsApp } from "./services/whatsapp.js";
+const app = express();
+const httpServer = createServer(app);
+export const io = new IOServer(httpServer, { cors: { origin: "*" } });
+app.use(cors());
+app.use(express.json());
+app.use("/api", apiRouter);
+app.get("/health", (_, res) => res.json({ status: "ok", ts: Date.now() }));
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, async () => { logger.info(`Servidor rodando na porta ${PORT}`); await startWhatsApp(); });
